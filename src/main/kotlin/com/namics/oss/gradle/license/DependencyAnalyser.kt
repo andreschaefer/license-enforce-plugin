@@ -30,8 +30,10 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import java.io.File
 
-public class DependencyAnalyser(val project: Project,
-                                val analyseConfigurations: List<String>) {
+class DependencyAnalyser(
+    private val project: Project,
+    private val analyseConfigurations: List<String>
+) {
 
     fun analyse(): List<Dependency> {
         setupEnvironment()
@@ -44,8 +46,8 @@ public class DependencyAnalyser(val project: Project,
      */
     private fun setupEnvironment() {
         // Create temporary configuration in order to store POM information
-        project.getConfigurations().create(POM_CONFIGURATION)
-        project.getConfigurations().forEach {
+        project.configurations.create(POM_CONFIGURATION)
+        project.configurations.forEach {
             try {
                 it.isCanBeResolved = true
             } catch (ignore: Exception) {
@@ -62,21 +64,29 @@ public class DependencyAnalyser(val project: Project,
         // Add POM information to our POM configuration
         val configurations = LinkedHashSet<Configuration>()
 
-        project.getConfigurations()
-                .filter { analyseConfigurations.contains(it.getName()) }
-                .forEach { configurations.add(it) }
+        project.configurations
+            .filter { analyseConfigurations.contains(it.name) }
+            .forEach { configurations.add(it) }
 
         configurations
-                .filter { it.isCanBeResolved }
-                .map { it.resolvedConfiguration }
-                .map { it.lenientConfiguration }
-                .flatMap { it.artifacts }
-                .map { "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}@pom" }
-                .forEach { project.configurations.getByName(POM_CONFIGURATION).dependencies.add(project.dependencies.add(POM_CONFIGURATION, it)) }
+            .filter { it.isCanBeResolved }
+            .map { it.resolvedConfiguration }
+            .map { it.lenientConfiguration }
+            .flatMap { it.artifacts }
+            .map { "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}@pom" }
+            .forEach {
+                project.configurations.getByName(POM_CONFIGURATION).dependencies.add(
+                    project.dependencies.add(
+                        POM_CONFIGURATION,
+                        it
+                    )
+                )
+            }
     }
 
     private fun dependencyInformation(): List<Dependency> {
-        val artifacts = project.getConfigurations().getByName(POM_CONFIGURATION).resolvedConfiguration.lenientConfiguration.artifacts
+        val artifacts = project.configurations
+            .getByName(POM_CONFIGURATION).resolvedConfiguration.lenientConfiguration.artifacts
         return artifacts.map {
             val pom = it
             val file = pom.file
@@ -87,14 +97,15 @@ public class DependencyAnalyser(val project: Project,
     }
 
 
+    @Suppress("TooGenericExceptionCaught")
     fun findLicenses(pomFile: File): List<License> {
         try {
 
             val parser = SAXParserImpl.JAXPSAXParser()
-            parser.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            parser.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-            parser.setFeature("http://xml.org/sax/features/namespaces", false);
-            parser.setFeature("http://xml.org/sax/features/namespace-prefixes", false);
+            parser.setFeature("http://xml.org/sax/features/external-general-entities", false)
+            parser.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            parser.setFeature("http://xml.org/sax/features/namespaces", false)
+            parser.setFeature("http://xml.org/sax/features/namespace-prefixes", false)
             val reader = SAXReader(parser, false)
             val doc = reader.read(pomFile)
 
@@ -103,8 +114,8 @@ public class DependencyAnalyser(val project: Project,
             }
 
             val lics = doc?.rootElement?.element("licenses")?.elements("license")
-                    ?.filterNotNull()
-                    ?.map { License(it.element("name")?.text ?: "", it.element("url")?.text ?: "") }
+                ?.filterNotNull()
+                ?.map { License(it.element("name")?.text ?: "", it.element("url")?.text ?: "") }
 
             if (lics != null)
                 return lics
@@ -129,28 +140,30 @@ public class DependencyAnalyser(val project: Project,
         val dependency = "$groupId:$artifactId:$version@pom"
 
         // Add dependency to temporary configuration
-        project.getConfigurations().create(TEMP_POM_CONFIGURATION)
+        project.configurations.create(TEMP_POM_CONFIGURATION)
 
-        project.getConfigurations().getByName(TEMP_POM_CONFIGURATION).dependencies.add(
-                project.getDependencies().add(TEMP_POM_CONFIGURATION, dependency)
+        project.configurations.getByName(TEMP_POM_CONFIGURATION).dependencies.add(
+            project.dependencies.add(TEMP_POM_CONFIGURATION, dependency)
         )
 
         // resolve file
-        val file = project.getConfigurations().getByName(TEMP_POM_CONFIGURATION).resolvedConfiguration.lenientConfiguration.artifacts.iterator().next().file
+        val file = project.configurations
+            .getByName(TEMP_POM_CONFIGURATION).resolvedConfiguration.lenientConfiguration.artifacts.iterator()
+            .next().file
 
         // cleanup
-        project.getConfigurations().remove(project.getConfigurations().getByName(TEMP_POM_CONFIGURATION))
+        project.configurations.remove(project.configurations.getByName(TEMP_POM_CONFIGURATION))
 
         return file
     }
 
 
     companion object {
-        private val ANDROID_SUPPORT_GROUP_ID = "com.android.support"
-        private val APACHE_LICENSE_NAME = "Apache License 2.0"
-        private val APACHE_LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        private const val ANDROID_SUPPORT_GROUP_ID = "com.android.support"
+        private const val APACHE_LICENSE_NAME = "Apache License 2.0"
+        private const val APACHE_LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0.txt"
 
-        private val POM_CONFIGURATION = "dependencyAnalyserPoms"
-        private val TEMP_POM_CONFIGURATION = "dependencyAnalyserPomsTemp"
+        private const val POM_CONFIGURATION = "dependencyAnalyserPoms"
+        private const val TEMP_POM_CONFIGURATION = "dependencyAnalyserPomsTemp"
     }
 }

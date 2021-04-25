@@ -27,5 +27,4 @@ internal class DependencyAnalyserTest {
     fun logbackParent() {
         systemUnderTest.findLicenses(File(DependencyAnalyserTest::class.java.getResource("/xml/logback-parent.pom").file))
     }
-
 }

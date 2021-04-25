@@ -26,10 +26,8 @@ package com.namics.oss.gradle.license
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
-public class LicenseEnforcePlugin : Plugin<Project> {
+class LicenseEnforcePlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
-        tasks.register("enforceLicenses", LicenseEnforceTask::class.java){
-
-        }
+        tasks.register("enforceLicenses", LicenseEnforceTask::class.java)
     }
 }

@@ -1,0 +1,8 @@
+# default: https://github.com/detekt/detekt/blob/main/detekt-core/src/main/resources/default-detekt-config.yml
+
+#build:
+#  maxIssues: 1
+
+style:
+  ReturnCount:
+    active: false
